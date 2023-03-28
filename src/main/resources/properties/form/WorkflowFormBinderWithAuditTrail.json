@@ -1,0 +1,66 @@
+[
+   {
+      "title":"@@WorkflowFormBinderWithAuditTrail.config@@",
+      "properties":[
+         {
+            "name": "auditTrailFormId",
+            "label": "@@WorkflowFormBinderWithAuditTrail.auditTrailForm@@",
+            "type": "selectbox",
+            "options_ajax": "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/forms/options",
+            "required": "True"
+         },
+         {
+            "name": "jsonDataField",
+            "label": "@@WorkflowFormBinderWithAuditTrail.jsonDataField@@",
+            "type" : "selectbox",
+            "required": "True",
+            "options_ajax_on_change" : "formDefId:auditTrailFormId",
+            "options_ajax" : "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options"
+         },
+         {
+            "name": "textualDataField",
+            "label": "@@WorkflowFormBinderWithAuditTrail.textualDataField@@",
+            "type": "selectbox",
+            "required": "True",
+            "options_ajax_on_change" : "formDefId:auditTrailFormId",
+            "options_ajax" : "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options"
+         },
+         {
+            "label" : "@@WorkflowFormBinderWithAuditTrail.config.header@@",
+            "type" : "header"
+         },
+         {
+            "name": "formDefId",
+            "label": "@@WorkflowFormBinderWithAuditTrail.formDefId@@",
+            "type": "selectbox",
+            "options_ajax": "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/forms/options",
+            "required": "True"
+         },
+         {
+            "name": "from",
+            "label": "@@WorkflowFormBinderWithAuditTrail.from@@",
+            "type": "selectbox",
+            "required": "True",
+            "options_ajax_on_change" : "formDefId",
+            "options_ajax" : "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options"
+         },
+         {
+            "name": "to",
+            "label": "@@WorkflowFormBinderWithAuditTrail.to@@",
+            "type": "selectbox",
+            "required": "True",
+            "options_ajax_on_change" : "formDefId:auditTrailFormId",
+            "options_ajax" : "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options"
+         },
+         {
+            "name": "foreignKey",
+            "label": "@@WorkflowFormBinderWithAuditTrail.foreignKey@@",
+            "description": "To store parent form ID",
+            "type": "selectbox",
+            "required": "True",
+            "options_ajax_on_change" : "formDefId:auditTrailFormId",
+            "options_ajax" : "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options"
+         }
+      ]
+   }
+]
