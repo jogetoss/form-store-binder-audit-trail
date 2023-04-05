@@ -55,11 +55,24 @@
          {
             "name": "foreignKey",
             "label": "@@WorkflowFormBinderWithAuditTrail.foreignKey@@",
-            "description": "To store parent form ID",
+            "description": "@@WorkflowFormBinderWithAuditTrail.foreignKeyDescription@@",
             "type": "selectbox",
             "required": "True",
             "options_ajax_on_change" : "formDefId:auditTrailFormId",
             "options_ajax" : "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options"
+         },
+         {
+            "name": "tracksEverything",
+            "label": "@@WorkflowFormBinderWithAuditTrail.tracksEverything@@",
+            "description": "@@WorkflowFormBinderWithAuditTrail.tracksEverythingDescription@@",
+            "type": "checkbox",
+            "value": "true",
+            "options": [
+               {
+                  "value": "true",
+                  "label": ""
+               }
+            ]
          }
       ]
    }

@@ -75,6 +75,7 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
             String auditTrailTextDiffField = getPropertyString("textualDataField");
             String auditTrailRemarksField = getPropertyString("from");
             String auditTrailRemarksColumn = getPropertyString("to");
+            boolean tracksEverything = Boolean.parseBoolean(getPropertyString("tracksEverything"));
 
             AppDefinition appDef = AppUtil.getCurrentAppDefinition();
             FormDefinitionDao formDefinitionDao = (FormDefinitionDao) FormUtil.getApplicationContext().getBean("formDefinitionDao");
@@ -145,7 +146,6 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
                     } else {
                         //skip remarks field
                         if (fieldID.equals(auditTrailRemarksField)) {
-                            remarks = after;
                             continue;
                         }
                         jsonDiff.accumulate("afterContentValue", after); //raw value, if it is a ID of a lookup, we need to populate the label
@@ -161,7 +161,7 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
             }
 
             //only if there is changes
-            if(jsonArray.length() != 0) {
+            if(jsonArray.length() != 0 || tracksEverything) {
                 //LogUtil.info(this.getClassName(), diff.entriesDiffering().toString());
                 //LogUtil.info(this.getClassName(), json.toString());
                 //store changes into n
@@ -169,7 +169,8 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
                 currentRow.put("id", primaryKey);
                 currentRow.put(auditTrailDiffField, jsonArray.toString());
                 currentRow.put(auditTrailTextDiffField, text);
-                currentRow.put(auditTrailRemarksColumn, remarks);
+                currentRow.put(auditTrailRemarksColumn, rows.get(0).get(auditTrailRemarksField));
+
 
                 //added empty row
                 rows.remove(0);
