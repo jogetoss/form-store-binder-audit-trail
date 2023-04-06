@@ -1,6 +1,10 @@
 # Description
 
-This repository is meant to serve as a general template for how to set up new repositories in the JogetOSS organization. 
+Form store binder audit trail would allow to store data that have been modified in another form to be seen.
+
+## Features
+* Would save the changes onto another table form, so it could be tracked. 
+* Could track any tampering on the data or only if there's changes on the form.
 
 # Getting Help
 
