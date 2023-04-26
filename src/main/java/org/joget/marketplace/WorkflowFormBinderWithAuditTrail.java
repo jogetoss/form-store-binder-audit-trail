@@ -4,11 +4,8 @@ import com.google.common.collect.MapDifference;
 import com.google.common.collect.MapDifference.ValueDifference;
 import com.google.common.collect.Maps;
 
-import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.joget.apps.app.dao.FormDefinitionDao;
 import org.joget.apps.app.model.FormDefinition;
@@ -16,7 +13,6 @@ import org.joget.apps.app.model.AppDefinition;
 import org.joget.apps.app.service.AppPluginUtil;
 import org.joget.apps.app.service.AppService;
 import org.joget.apps.app.service.AppUtil;
-import org.joget.apps.form.dao.FormDataDao;
 import org.joget.apps.form.model.FormData;
 import org.joget.apps.form.model.*;
 import org.joget.apps.form.service.FormUtil;
@@ -94,7 +90,6 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
 
             Map differences = diff.entriesDiffering();
             String text = "";
-            String remarks = "";
 
             for (Object obj : differences.keySet()) {
                 String id = element.getPropertyString(FormUtil.PROPERTY_ID);
@@ -105,7 +100,6 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
                 String after = vd.rightValue().toString();
                 String beforeContentID = "";
                 String afterContentID = "";
-                //LogUtil.info(this.getClassName(), " fieldID > " + fieldID + " -- before: " + before + " -- after: " + after);
 
                 JSONObject jsonDiff = new JSONObject();
                 try {
@@ -162,8 +156,6 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
 
             //only if there is changes
             if(jsonArray.length() != 0 || tracksEverything) {
-                //LogUtil.info(this.getClassName(), diff.entriesDiffering().toString());
-                //LogUtil.info(this.getClassName(), json.toString());
                 //store changes into n
                 FormRow currentRow = rows.get(0);
                 currentRow.put("id", primaryKey);
