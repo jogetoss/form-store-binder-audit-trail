@@ -1,6 +1,8 @@
 # Description
 
-Form store binder audit trail would allow to store data that have been modified in another form to be seen.
+**Form Store Binder Audit Trail** would allow to store data that have been modified as audit trail data in another form.
+
+![sample](https://github.com/jogetoss/form-store-binder-audit-trail/assets/70784722/4c947854-994e-4f02-b00d-a32e9a28996d)
 
 ## Features
 * Would save the changes onto another table form, so it could be tracked. 
