@@ -4,6 +4,9 @@ import com.google.common.collect.MapDifference;
 import com.google.common.collect.MapDifference.ValueDifference;
 import com.google.common.collect.Maps;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -13,7 +16,6 @@ import org.joget.apps.app.model.AppDefinition;
 import org.joget.apps.app.service.AppPluginUtil;
 import org.joget.apps.app.service.AppService;
 import org.joget.apps.app.service.AppUtil;
-import org.joget.apps.form.model.FormData;
 import org.joget.apps.form.model.*;
 import org.joget.apps.form.service.FormUtil;
 import org.joget.apps.form.lib.WorkflowFormBinder;
@@ -111,42 +113,53 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
 
                     jsonDiff.accumulate("fieldID", fieldID); //i.e. full_name
                     jsonDiff.accumulate("fieldLabel", label); //i.e. full_name
+                    Boolean printAfterBeforeWithLabel = false;
+                    Boolean printAfterBefore = false;
 
-                    if (jsonProperty.get("label").equals("Select Box")) {
-                        FormRowSet selectRows = formData.getOptionsBinderData(controlElement, fieldID);
-                        String beforeContentLabel = "";
-                        String afterContentLabel = "";
-                        for (FormRow selectRow : selectRows) {
-                            if (selectRow.get("value").equals(before)) {
-                                jsonDiff.accumulate("beforeContentID", selectRow.get("value"));
-                                beforeContentID = (String) selectRow.get("value");
-                                jsonDiff.accumulate("beforeContentValue", (String) selectRow.get("label")); //raw value, if it is a ID of a lookup, we need to populate the label
-                                beforeContentLabel = selectRow.get("label").toString();
+                    FormRowSet selectRows = formData.getOptionsBinderData(controlElement, fieldID);
+                    if(selectRows == null) {
+                        selectRows = (FormRowSet) controlElementPropertyOptions.get("options");
+                        if(selectRows == null) {
+                            if (fieldID.equals(auditTrailRemarksField)) {
+                                continue;
                             }
-                            if (selectRow.get("value").equals(after)) {
-                                jsonDiff.accumulate("afterContentId", selectRow.get("value"));
-                                afterContentID = (String) selectRow.get("value");
-                                jsonDiff.accumulate("afterContentValue", (String) selectRow.get("label")); //raw value, if it is a ID of a lookup, we need to populate the label
-                                afterContentLabel = selectRow.get("label").toString();
-
-                            }
-                            if (!beforeContentID.equals("") && !afterContentID.equals("")) {
-                                text += "Field Label: " + label + ",\nField ID: " + fieldID + ","
-                                        + "\nBefore Content Value: " + beforeContentLabel + ",\nAfter Content Value: " + afterContentLabel + ","
-                                        + "\nBefore ID Value: " + beforeContentID + ",\nAfter ID Value: " + afterContentID + "\n\n";
-                                break;
-                            }
+                            printAfterBefore = true;
+                        } else {
+                            printAfterBeforeWithLabel = true;
                         }
                     } else {
-                        //skip remarks field
-                        if (fieldID.equals(auditTrailRemarksField)) {
-                            continue;
+                        printAfterBeforeWithLabel = true;
+                    }
+                    
+                    if(printAfterBeforeWithLabel){
+                        String beforeContentLabel = "";
+                        String afterContentLabel = "";
+    
+                        beforeContentID = before;
+                        beforeContentLabel = mapValuesToLabels(before, selectRows);
+                        afterContentID = after;
+                        afterContentLabel = mapValuesToLabels(after, selectRows);
+
+                        if (!beforeContentLabel.equals("") || !afterContentLabel.equals("")) {
+                            jsonDiff.accumulate("beforeContentID", beforeContentID);
+                            jsonDiff.accumulate("beforeContentValue", beforeContentLabel); //raw value, if it is a ID of a lookup, we need to populate the label
+                            jsonDiff.accumulate("afterContentID", afterContentID);
+                            jsonDiff.accumulate("afterContentValue", afterContentLabel); //raw value, if it is a ID of a lookup, we need to populate the label
+                            text += "Field Label: " + label + ",\nField ID: " + fieldID + ","
+                            + "\nBefore Content Value: " + beforeContentLabel + ",\nAfter Content Value: " + afterContentLabel + ","
+                            + "\nBefore ID Value: " + beforeContentID + ",\nAfter ID Value: " + afterContentID + "\n\n";
+                        } else {
+                            printAfterBefore = true;
                         }
+                    }
+
+                    if(printAfterBefore){
                         jsonDiff.accumulate("afterContentValue", after); //raw value, if it is a ID of a lookup, we need to populate the label
                         jsonDiff.accumulate("beforeContentValue", before); //raw value, if it is a ID of a lookup, we need to populate the label
                         text += "Field Label: " + label + ",\nField ID: " + fieldID + ","
                                 + "\nBefore Content Value: " + before + ",\nAfter Content Value: " + after + "\n\n";
                     }
+                    
                 } catch (JSONException ex) {
                     LogUtil.error(this.getClassName(), ex, "Error building changes object");
                 }
@@ -182,5 +195,46 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
 
         //proceed as usual
         return super.store(element, rows, formData);
+    }
+
+    public static String mapValuesToLabels(String rawValue, FormRowSet options) {
+        if (rawValue == null || options == null) {
+            return "";
+        }
+
+        // Build value-to-label map
+        Map<String, String> valueToLabelMap = new HashMap<>();
+        for (FormRow row : options) {
+            String value = row.get("value") != null ? row.get("value").toString().trim() : "";
+            String label = row.get("label") != null ? row.get("label").toString().trim() : "";
+            valueToLabelMap.put(value, label);
+        }
+
+        // Split input and map each value
+        String[] values = rawValue.split(";");
+        List<String> mappedLabels = new ArrayList<>();
+        for (String val : values) {
+            String trimmedVal = val.trim();
+            String mappedLabel = valueToLabelMap.getOrDefault(trimmedVal, trimmedVal); // fallback to value if label not found
+
+            if (mappedLabel.isEmpty()) {
+                mappedLabel = "\"\"";
+            }
+
+            mappedLabels.add(mappedLabel);
+        }
+
+        boolean allEmptyStrings = true;
+        for (String label : mappedLabels) {
+            if (!"\"\"".equals(label)) {
+                allEmptyStrings = false;
+                break;
+            }
+        }
+        if (allEmptyStrings) {
+            return "";
+        }
+
+        return String.join(";", mappedLabels);
     }
 }

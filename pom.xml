@@ -4,7 +4,7 @@
     <groupId>org.joget.marketplace</groupId>
     <artifactId>form-store-binder-audit-trail</artifactId>
     <packaging>bundle</packaging>
-    <version>8.0.0</version>
+    <version>8.0.1</version>
     <name>form-store-binder-audit-trail</name>
     <url>http://www.joget.org</url>
     <build>
