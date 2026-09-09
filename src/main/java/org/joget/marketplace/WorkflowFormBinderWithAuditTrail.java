@@ -71,9 +71,9 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
             String auditTrailRemarksColumn = getPropertyString("to");
             boolean tracksEverything = Boolean.parseBoolean(getPropertyString("tracksEverything"));
             //the remarks field's value is already copied into auditTrailRemarksColumn as a dedicated column (see below),
-            //so by default it is excluded from the JSON/textual diff to avoid duplicate logging. Default to true (skip)
-            //when the property is unset so existing configurations keep their current behavior.
-            boolean excludeRemarksFieldFromDiff = !"false".equals(getPropertyString("excludeRemarksFieldFromDiff"));
+            //so by default it is excluded from the JSON/textual diff to avoid duplicate logging. Checking
+            //"includeCopiedFieldInDiff" opts back into also tracking that field's own before/after change.
+            boolean includeCopiedFieldInDiff = "true".equals(getPropertyString("includeCopiedFieldInDiff"));
 
             AppDefinition appDef = AppUtil.getCurrentAppDefinition();
             FormDefinitionDao formDefinitionDao = (FormDefinitionDao) FormUtil.getApplicationContext().getBean("formDefinitionDao");
@@ -119,7 +119,7 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
                     if(selectRows == null) {
                         selectRows = (FormRowSet) controlElementPropertyOptions.get("options");
                         if(selectRows == null) {
-                            if (excludeRemarksFieldFromDiff && fieldID.equals(auditTrailRemarksField)) {
+                            if (!includeCopiedFieldInDiff && fieldID.equals(auditTrailRemarksField)) {
                                 continue;
                             }
                             printAfterBefore = true;
