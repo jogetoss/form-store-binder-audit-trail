@@ -1,9 +1,5 @@
 package org.joget.marketplace;
 
-import com.google.common.collect.MapDifference;
-import com.google.common.collect.MapDifference.ValueDifference;
-import com.google.common.collect.Maps;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -74,6 +70,10 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
             String auditTrailRemarksField = getPropertyString("from");
             String auditTrailRemarksColumn = getPropertyString("to");
             boolean tracksEverything = Boolean.parseBoolean(getPropertyString("tracksEverything"));
+            //the remarks field's value is already copied into auditTrailRemarksColumn as a dedicated column (see below),
+            //so by default it is excluded from the JSON/textual diff to avoid duplicate logging. Checking
+            //"includeCopiedFieldInDiff" opts back into also tracking that field's own before/after change.
+            boolean includeCopiedFieldInDiff = "true".equals(getPropertyString("includeCopiedFieldInDiff"));
 
             AppDefinition appDef = AppUtil.getCurrentAppDefinition();
             FormDefinitionDao formDefinitionDao = (FormDefinitionDao) FormUtil.getApplicationContext().getBean("formDefinitionDao");
@@ -87,19 +87,18 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
             FormRowSet existingData = formData.getLoadBinderData(element);
 
             //find differences
-            MapDifference diff = Maps.difference((Map) existingData.get(0), (Map) rows.get(0));
+            Map differences = entriesDiffering((Map) existingData.get(0), (Map) rows.get(0));
             JSONArray jsonArray = new JSONArray();
 
-            Map differences = diff.entriesDiffering();
             String text = "";
 
             for (Object obj : differences.keySet()) {
                 String id = element.getPropertyString(FormUtil.PROPERTY_ID);
 
-                ValueDifference vd = ((ValueDifference) differences.get(obj));
+                ValueDiff vd = ((ValueDiff) differences.get(obj));
                 String fieldID = obj.toString();
-                String before = vd.leftValue().toString();
-                String after = vd.rightValue().toString();
+                String before = vd.left.toString();
+                String after = vd.right.toString();
                 String beforeContentID = "";
                 String afterContentID = "";
 
@@ -120,7 +119,7 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
                     if(selectRows == null) {
                         selectRows = (FormRowSet) controlElementPropertyOptions.get("options");
                         if(selectRows == null) {
-                            if (fieldID.equals(auditTrailRemarksField)) {
+                            if (!includeCopiedFieldInDiff && fieldID.equals(auditTrailRemarksField)) {
                                 continue;
                             }
                             printAfterBefore = true;
@@ -236,5 +235,39 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
         }
 
         return String.join(";", mappedLabels);
+    }
+
+    /**
+     * Plain-Java replacement for Guava's Maps.difference(left, right).entriesDiffering().
+     * Guava is not embedded/imported by this bundle's OSGi manifest, so relying on it
+     * throws NoClassDefFoundError at runtime even though it is available at compile time
+     * (pulled in transitively, with provided scope, via wflow-core).
+     *
+     * Returns only the keys present in both maps whose values differ (null-safe equality),
+     * matching Guava's entriesDiffering() semantics.
+     */
+    private static Map<Object, ValueDiff> entriesDiffering(Map left, Map right) {
+        Map<Object, ValueDiff> result = new HashMap<>();
+        for (Object key : left.keySet()) {
+            if (right.containsKey(key)) {
+                Object leftValue = left.get(key);
+                Object rightValue = right.get(key);
+                boolean equal = (leftValue == null) ? (rightValue == null) : leftValue.equals(rightValue);
+                if (!equal) {
+                    result.put(key, new ValueDiff(leftValue, rightValue));
+                }
+            }
+        }
+        return result;
+    }
+
+    private static class ValueDiff {
+        final Object left;
+        final Object right;
+
+        ValueDiff(Object left, Object right) {
+            this.left = left;
+            this.right = right;
+        }
     }
 }

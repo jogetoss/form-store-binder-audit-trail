@@ -53,6 +53,19 @@
             "options_ajax" : "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options"
          },
          {
+            "name": "includeCopiedFieldInDiff",
+            "label": "@@WorkflowFormBinderWithAuditTrail.includeCopiedFieldInDiff@@",
+            "description": "@@WorkflowFormBinderWithAuditTrail.includeCopiedFieldInDiffDescription@@",
+            "type": "checkbox",
+            "value": "true",
+            "options": [
+               {
+                  "value": "true",
+                  "label": ""
+               }
+            ]
+         },
+         {
             "name": "foreignKey",
             "label": "@@WorkflowFormBinderWithAuditTrail.foreignKey@@",
             "description": "@@WorkflowFormBinderWithAuditTrail.foreignKeyDescription@@",
