@@ -2,6 +2,7 @@ package org.joget.marketplace;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -69,6 +70,8 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
             String auditTrailTextDiffField = getPropertyString("textualDataField");
             String auditTrailRemarksField = getPropertyString("from");
             String auditTrailRemarksColumn = getPropertyString("to");
+            String auditTrailSummaryField = getPropertyString("summaryField");
+            String summaryTemplate = getPropertyString("summaryTemplate");
             boolean tracksEverything = Boolean.parseBoolean(getPropertyString("tracksEverything"));
             //the remarks field's value is already copied into auditTrailRemarksColumn as a dedicated column (see below),
             //so by default it is excluded from the JSON/textual diff to avoid duplicate logging. Checking
@@ -115,7 +118,49 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
                     Boolean printAfterBeforeWithLabel = false;
                     Boolean printAfterBefore = false;
 
+                    //formData.getOptionsBinderData only returns a result if something already loaded and
+                    //cached this element's options earlier in the same request (e.g. a live form submit).
+                    //When store() runs outside that path (API-triggered saves, background process
+                    //completion, etc.) the cache is empty, so fall back to loading the element's
+                    //configured "Load Data From" options binder directly to resolve id-to-label pairs.
                     FormRowSet selectRows = formData.getOptionsBinderData(controlElement, fieldID);
+                    if (selectRows == null) {
+                        FormLoadBinder optionsBinder = FormUtil.findOptionsBinder(controlElement);
+                        if (optionsBinder != null) {
+                            try {
+                                selectRows = optionsBinder.load(controlElement, primaryKey, formData);
+                            } catch (Exception ex) {
+                                LogUtil.error(this.getClassName(), ex, "Error loading options binder data for field " + fieldID);
+                            }
+                        }
+                    }
+                    //Some custom select-type elements (e.g. plugins backed by a DataList) don't wire a
+                    //FormLoadBinder at all and instead implement FormReferenceDataRetriever to resolve
+                    //their selected values back to full rows. Where such an element also exposes the
+                    //"idField"/"displayField" properties (the convention used by, e.g., the marketplace
+                    //"Dynamic Options Select Box" plugin) build a value/label row set from those rows too.
+                    if (selectRows == null && controlElement instanceof FormReferenceDataRetriever) {
+                        String idField = controlElement.getPropertyString("idField");
+                        String displayField = controlElement.getPropertyString("displayField");
+                        if (!displayField.isEmpty()) {
+                            try {
+                                FormRowSet referenceRows = ((FormReferenceDataRetriever) controlElement).loadFormRows(new String[0], formData);
+                                if (referenceRows != null) {
+                                    FormRowSet referenceSelectRows = new FormRowSet();
+                                    for (FormRow referenceRow : referenceRows) {
+                                        String idValue = !idField.isEmpty() ? referenceRow.getProperty(idField) : referenceRow.getId();
+                                        FormRow optionRow = new FormRow();
+                                        optionRow.setProperty("value", idValue);
+                                        optionRow.setProperty("label", referenceRow.getProperty(displayField));
+                                        referenceSelectRows.add(optionRow);
+                                    }
+                                    selectRows = referenceSelectRows;
+                                }
+                            } catch (Exception ex) {
+                                LogUtil.error(this.getClassName(), ex, "Error loading reference data for field " + fieldID);
+                            }
+                        }
+                    }
                     if(selectRows == null) {
                         selectRows = (FormRowSet) controlElementPropertyOptions.get("options");
                         if(selectRows == null) {
@@ -168,32 +213,87 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
 
             //only if there is changes
             if(jsonArray.length() != 0 || tracksEverything) {
-                //store changes into n
-                FormRow currentRow = rows.get(0);
-                currentRow.put("id", primaryKey);
-                currentRow.put(auditTrailDiffField, jsonArray.toString());
-                currentRow.put(auditTrailTextDiffField, text);
-                currentRow.put(auditTrailRemarksColumn, rows.get(0).get(auditTrailRemarksField));
+                rows.get(0).put("id", primaryKey);
 
+                //Build the audit row as an independent copy of the parent row's field values, rather than
+                //reusing/mutating rows.get(0) directly. FormRow carries pending file-upload temp-file state
+                //(tempFilePathMap) alongside its field values; storing that same object here - before
+                //super.store() below processes it for the parent form - caused any uploaded file to be
+                //moved into the audit trail form's upload folder instead of the parent form's. Copying just
+                //the field values (not the FormRow object itself) leaves the parent row's temp-file state
+                //untouched, so only the parent form's own store() moves the upload, to the right folder.
+                //Note: don't use auditRow.putAll(rows.get(0)) here - FormRow declares its own putAll(FormRow)
+                //overload that *also* copies tempFilePathMap/deleteFilePathMap, silently reintroducing this
+                //same bug. Copy entries explicitly instead, via the plain Map/Hashtable putAll.
+                FormRow auditRow = new FormRow();
+                auditRow.putAll((Map) rows.get(0));
+                auditRow.setId(UUID.randomUUID().toString());
+                auditRow.put(auditTrailTableForeignKey, primaryKey);
+                auditRow.put(auditTrailDiffField, jsonArray.toString());
+                if (!auditTrailTextDiffField.isEmpty()) {
+                    auditRow.put(auditTrailTextDiffField, text);
+                }
+                auditRow.put(auditTrailRemarksColumn, rows.get(0).get(auditTrailRemarksField));
 
-                //added empty row
-                rows.remove(0);
-                rows.add(currentRow);
+                if (!auditTrailSummaryField.isEmpty() && !summaryTemplate.isEmpty()) {
+                    String processedTemplate = AppUtil.processHashVariable(summaryTemplate, formData.getAssignment(), null, null);
+                    auditRow.put(auditTrailSummaryField, renderSummaryTemplate(processedTemplate, jsonArray));
+                }
 
-                //retrieve n-1
                 FormRowSet auditRows = new FormRowSet();
-                FormRow currentTemp = rows.get(0);
-                currentTemp.put(auditTrailTableForeignKey, primaryKey);
-                currentTemp.setId(UUID.randomUUID().toString());
-                auditRows.add(currentTemp);
+                auditRows.add(auditRow);
                 appService.storeFormData(auditTrailFormID, auditTrailTableName, auditRows, null);
-                rows.get(0).setId(primaryKey);
             }
 
         }
 
         //proceed as usual
         return super.store(element, rows, formData);
+    }
+
+    /**
+     * Renders the "Summary Template" property into a human-readable summary of the field changes.
+     * The template is plain text/HTML; a single <foreach>...</foreach> block, if present, is repeated
+     * once per entry in fieldDiffs, with {key} placeholders substituted from that entry's JSON properties
+     * (fieldID, fieldLabel, beforeContentValue, afterContentValue, and beforeContentID/afterContentID when
+     * present). Text outside the <foreach> block is emitted once, unchanged (hash variables such as
+     * #currentUser.fullName# are expected to already be processed by the caller).
+     */
+    private static String renderSummaryTemplate(String template, JSONArray fieldDiffs) {
+        if (template == null || template.isEmpty()) {
+            return "";
+        }
+
+        String header = template;
+        String loopBlock = "";
+        String footer = "";
+
+        int foreachStart = template.indexOf("<foreach>");
+        int foreachEnd = template.indexOf("</foreach>");
+        if (foreachStart != -1 && foreachEnd != -1 && foreachEnd > foreachStart) {
+            header = template.substring(0, foreachStart);
+            loopBlock = template.substring(foreachStart + "<foreach>".length(), foreachEnd);
+            footer = template.substring(foreachEnd + "</foreach>".length());
+        }
+
+        StringBuilder summary = new StringBuilder();
+        summary.append(header);
+        for (int i = 0; i < fieldDiffs.length(); i++) {
+            JSONObject fieldDiff = fieldDiffs.optJSONObject(i);
+            if (fieldDiff == null) {
+                continue;
+            }
+            String rendered = loopBlock;
+            for (Iterator it = fieldDiff.keys(); it.hasNext();) {
+                String key = (String) it.next();
+                rendered = rendered.replace("{" + key + "}", fieldDiff.optString(key, ""));
+            }
+            //strip placeholders that had no matching key in this entry (e.g. ID placeholders on non-lookup fields)
+            rendered = rendered.replaceAll("\\{[a-zA-Z0-9_]+\\}", "");
+            summary.append(rendered);
+        }
+        summary.append(footer);
+        return summary.toString();
     }
 
     public static String mapValuesToLabels(String rawValue, FormRowSet options) {

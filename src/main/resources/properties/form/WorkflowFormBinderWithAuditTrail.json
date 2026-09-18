@@ -20,10 +20,30 @@
          {
             "name": "textualDataField",
             "label": "@@WorkflowFormBinderWithAuditTrail.textualDataField@@",
+            "description": "@@WorkflowFormBinderWithAuditTrail.textualDataFieldDescription@@",
             "type": "selectbox",
-            "required": "True",
             "options_ajax_on_change" : "formDefId:auditTrailFormId",
             "options_ajax" : "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options"
+         },
+         {
+            "name": "summaryField",
+            "label": "@@WorkflowFormBinderWithAuditTrail.summaryField@@",
+            "description": "@@WorkflowFormBinderWithAuditTrail.summaryFieldDescription@@",
+            "type" : "selectbox",
+            "options_ajax_on_change" : "formDefId:auditTrailFormId",
+            "options_ajax" : "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options"
+         },
+         {
+            "label" : "@@WorkflowFormBinderWithAuditTrail.summaryTemplate@@",
+            "type" : "header",
+            "description" : "@@WorkflowFormBinderWithAuditTrail.summaryTemplateDescription@@"
+         },
+         {
+            "name": "summaryTemplate",
+            "label": "@@WorkflowFormBinderWithAuditTrail.summaryTemplate@@",
+            "type": "codeeditor",
+            "mode": "html",
+            "value": "<b>#currentUser.fullName#</b> updated:-\n<foreach>\n<br/><b>{fieldLabel}</b> to \"{afterContentValue}\" from \"{beforeContentValue}\".\n</foreach>"
          },
          {
             "label" : "@@WorkflowFormBinderWithAuditTrail.config.header@@",
