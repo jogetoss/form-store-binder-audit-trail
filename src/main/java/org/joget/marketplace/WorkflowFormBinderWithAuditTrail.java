@@ -213,33 +213,36 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
 
             //only if there is changes
             if(jsonArray.length() != 0 || tracksEverything) {
-                //store changes into n
-                FormRow currentRow = rows.get(0);
-                currentRow.put("id", primaryKey);
-                currentRow.put(auditTrailDiffField, jsonArray.toString());
+                rows.get(0).put("id", primaryKey);
+
+                //Build the audit row as an independent copy of the parent row's field values, rather than
+                //reusing/mutating rows.get(0) directly. FormRow carries pending file-upload temp-file state
+                //(tempFilePathMap) alongside its field values; storing that same object here - before
+                //super.store() below processes it for the parent form - caused any uploaded file to be
+                //moved into the audit trail form's upload folder instead of the parent form's. Copying just
+                //the field values (not the FormRow object itself) leaves the parent row's temp-file state
+                //untouched, so only the parent form's own store() moves the upload, to the right folder.
+                //Note: don't use auditRow.putAll(rows.get(0)) here - FormRow declares its own putAll(FormRow)
+                //overload that *also* copies tempFilePathMap/deleteFilePathMap, silently reintroducing this
+                //same bug. Copy entries explicitly instead, via the plain Map/Hashtable putAll.
+                FormRow auditRow = new FormRow();
+                auditRow.putAll((Map) rows.get(0));
+                auditRow.setId(UUID.randomUUID().toString());
+                auditRow.put(auditTrailTableForeignKey, primaryKey);
+                auditRow.put(auditTrailDiffField, jsonArray.toString());
                 if (!auditTrailTextDiffField.isEmpty()) {
-                    currentRow.put(auditTrailTextDiffField, text);
+                    auditRow.put(auditTrailTextDiffField, text);
                 }
-                currentRow.put(auditTrailRemarksColumn, rows.get(0).get(auditTrailRemarksField));
+                auditRow.put(auditTrailRemarksColumn, rows.get(0).get(auditTrailRemarksField));
 
                 if (!auditTrailSummaryField.isEmpty() && !summaryTemplate.isEmpty()) {
                     String processedTemplate = AppUtil.processHashVariable(summaryTemplate, formData.getAssignment(), null, null);
-                    currentRow.put(auditTrailSummaryField, renderSummaryTemplate(processedTemplate, jsonArray));
+                    auditRow.put(auditTrailSummaryField, renderSummaryTemplate(processedTemplate, jsonArray));
                 }
 
-
-                //added empty row
-                rows.remove(0);
-                rows.add(currentRow);
-
-                //retrieve n-1
                 FormRowSet auditRows = new FormRowSet();
-                FormRow currentTemp = rows.get(0);
-                currentTemp.put(auditTrailTableForeignKey, primaryKey);
-                currentTemp.setId(UUID.randomUUID().toString());
-                auditRows.add(currentTemp);
+                auditRows.add(auditRow);
                 appService.storeFormData(auditTrailFormID, auditTrailTableName, auditRows, null);
-                rows.get(0).setId(primaryKey);
             }
 
         }
