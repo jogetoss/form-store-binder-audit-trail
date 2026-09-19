@@ -73,6 +73,7 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
             String auditTrailSummaryField = getPropertyString("summaryField");
             String summaryTemplate = getPropertyString("summaryTemplate");
             boolean tracksEverything = Boolean.parseBoolean(getPropertyString("tracksEverything"));
+            Object fieldMappingsProperty = getProperty("fieldMappings");
             //the remarks field's value is already copied into auditTrailRemarksColumn as a dedicated column (see below),
             //so by default it is excluded from the JSON/textual diff to avoid duplicate logging. Checking
             //"includeCopiedFieldInDiff" opts back into also tracking that field's own before/after change.
@@ -215,18 +216,37 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
             if(jsonArray.length() != 0 || tracksEverything) {
                 rows.get(0).put("id", primaryKey);
 
-                //Build the audit row as an independent copy of the parent row's field values, rather than
-                //reusing/mutating rows.get(0) directly. FormRow carries pending file-upload temp-file state
-                //(tempFilePathMap) alongside its field values; storing that same object here - before
-                //super.store() below processes it for the parent form - caused any uploaded file to be
-                //moved into the audit trail form's upload folder instead of the parent form's. Copying just
-                //the field values (not the FormRow object itself) leaves the parent row's temp-file state
-                //untouched, so only the parent form's own store() moves the upload, to the right folder.
-                //Note: don't use auditRow.putAll(rows.get(0)) here - FormRow declares its own putAll(FormRow)
-                //overload that *also* copies tempFilePathMap/deleteFilePathMap, silently reintroducing this
-                //same bug. Copy entries explicitly instead, via the plain Map/Hashtable putAll.
+                //Build the audit row from scratch rather than reusing/mutating rows.get(0) directly.
+                //FormRow carries pending file-upload temp-file state (tempFilePathMap) alongside its
+                //field values; storing that same object here - before super.store() below processes it
+                //for the parent form - caused any uploaded file to be moved into the audit trail form's
+                //upload folder instead of the parent form's. Copying only specific field values (not the
+                //FormRow object itself, and not via auditRow.putAll(rows.get(0)) - FormRow declares its
+                //own putAll(FormRow) overload that *also* copies tempFilePathMap/deleteFilePathMap,
+                //silently reintroducing this same bug) leaves the parent row's temp-file state untouched,
+                //so only the parent form's own store() moves the upload, to the right folder.
                 FormRow auditRow = new FormRow();
-                auditRow.putAll((Map) rows.get(0));
+
+                //Optional: copy other field values from the parent row verbatim, as configured in the
+                //"Additional Field Mappings" grid. Applied first so the plugin's own dedicated columns
+                //below (foreign key, diff fields, remarks, summary) always take precedence if a mapping
+                //happens to target the same column.
+                if (fieldMappingsProperty instanceof Object[]) {
+                    for (Object mapping : (Object[]) fieldMappingsProperty) {
+                        if (!(mapping instanceof Map)) {
+                            continue;
+                        }
+                        Map mappingRow = (Map) mapping;
+                        Object fromObj = mappingRow.get("from");
+                        Object toObj = mappingRow.get("to");
+                        String mappingFrom = fromObj != null ? fromObj.toString().trim() : "";
+                        String mappingTo = toObj != null ? toObj.toString().trim() : "";
+                        if (!mappingFrom.isEmpty() && !mappingTo.isEmpty()) {
+                            auditRow.put(mappingTo, rows.get(0).get(mappingFrom));
+                        }
+                    }
+                }
+
                 auditRow.setId(UUID.randomUUID().toString());
                 auditRow.put(auditTrailTableForeignKey, primaryKey);
                 auditRow.put(auditTrailDiffField, jsonArray.toString());

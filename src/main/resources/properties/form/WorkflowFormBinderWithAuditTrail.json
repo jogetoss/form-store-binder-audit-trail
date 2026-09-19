@@ -86,6 +86,22 @@
             ]
          },
          {
+            "name": "fieldMappings",
+            "label": "@@WorkflowFormBinderWithAuditTrail.fieldMappings@@",
+            "description": "@@WorkflowFormBinderWithAuditTrail.fieldMappingsDescription@@",
+            "type": "grid",
+            "columns": [
+               {
+                  "key": "from",
+                  "label": "@@WorkflowFormBinderWithAuditTrail.fieldMappingsFrom@@"
+               },
+               {
+                  "key": "to",
+                  "label": "@@WorkflowFormBinderWithAuditTrail.fieldMappingsTo@@"
+               }
+            ]
+         },
+         {
             "name": "foreignKey",
             "label": "@@WorkflowFormBinderWithAuditTrail.foreignKey@@",
             "description": "@@WorkflowFormBinderWithAuditTrail.foreignKeyDescription@@",
