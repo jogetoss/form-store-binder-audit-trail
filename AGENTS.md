@@ -65,21 +65,18 @@ layout if adding tests.
 - [WorkflowFormBinderWithAuditTrail.json](src/main/resources/properties/form/WorkflowFormBinderWithAuditTrail.json)
   defines the plugin's property editor (shown in the Joget Form Builder when selecting this
   binder). Key properties, all read in `store()` via `getPropertyString(...)`:
+  - `formDefId` — the *current* form being audited; informational context for whoever configures
+    the binder (not read directly in `store()`).
   - `auditTrailFormId` / `jsonDataField` / `textualDataField` — which form/table receives the audit
     row, and which of its columns hold the JSON diff and text diff respectively.
-  - `formDefId` / `from` / `to` — the *current* form and the field on it (`from`) whose value is
-    copied verbatim into a dedicated audit trail column (`to`) on every audit row, independent of
-    the JSON/text diff.
-  - `includeCopiedFieldInDiff` — since the `from` field's value is already copied into `to` as a
-    dedicated column, it's excluded from the JSON/text diff by default to avoid duplicate logging;
-    checking this opts back into also diffing that field.
   - `fieldMappings` — a grid of `from`/`to` field-ID pairs; each row copies that field's current
     value from the parent form verbatim into the named column on the audit trail row (no diffing).
     Applied before the dedicated columns above/below are set, so a mapping can never clobber them.
-    This is the deterministic, opt-in form of a copy-everything-that-matches behavior that briefly
-    existed as an accidental side effect of `auditRow.putAll(rows.get(0))` during the file-upload
-    bugfix (see git history) — that call is intentionally not used; only explicitly configured
-    fields are ever copied.
+    This is the deterministic, opt-in replacement for a single hardcoded `from`/`to` field (plus an
+    `includeCopiedFieldInDiff` toggle to exclude it from the diff) that this plugin used to have, and
+    for a copy-everything-that-matches behavior that briefly existed as an accidental side effect of
+    `auditRow.putAll(rows.get(0))` during the file-upload bugfix (see git history) — that call is
+    intentionally not used; only explicitly configured fields are ever copied.
   - `foreignKey` — the column on the audit trail form that stores the parent record's primary key.
   - `tracksEverything` — if checked, an audit row is written on every save even when nothing
     changed; if unchecked, audit rows are only written when at least one tracked field differs.

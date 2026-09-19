@@ -68,16 +68,10 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
             String auditTrailFormID = getPropertyString("auditTrailFormId");
             String auditTrailDiffField = getPropertyString("jsonDataField");
             String auditTrailTextDiffField = getPropertyString("textualDataField");
-            String auditTrailRemarksField = getPropertyString("from");
-            String auditTrailRemarksColumn = getPropertyString("to");
             String auditTrailSummaryField = getPropertyString("summaryField");
             String summaryTemplate = getPropertyString("summaryTemplate");
             boolean tracksEverything = Boolean.parseBoolean(getPropertyString("tracksEverything"));
             Object fieldMappingsProperty = getProperty("fieldMappings");
-            //the remarks field's value is already copied into auditTrailRemarksColumn as a dedicated column (see below),
-            //so by default it is excluded from the JSON/textual diff to avoid duplicate logging. Checking
-            //"includeCopiedFieldInDiff" opts back into also tracking that field's own before/after change.
-            boolean includeCopiedFieldInDiff = "true".equals(getPropertyString("includeCopiedFieldInDiff"));
 
             AppDefinition appDef = AppUtil.getCurrentAppDefinition();
             FormDefinitionDao formDefinitionDao = (FormDefinitionDao) FormUtil.getApplicationContext().getBean("formDefinitionDao");
@@ -165,9 +159,6 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
                     if(selectRows == null) {
                         selectRows = (FormRowSet) controlElementPropertyOptions.get("options");
                         if(selectRows == null) {
-                            if (!includeCopiedFieldInDiff && fieldID.equals(auditTrailRemarksField)) {
-                                continue;
-                            }
                             printAfterBefore = true;
                         } else {
                             printAfterBeforeWithLabel = true;
@@ -253,7 +244,6 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
                 if (!auditTrailTextDiffField.isEmpty()) {
                     auditRow.put(auditTrailTextDiffField, text);
                 }
-                auditRow.put(auditTrailRemarksColumn, rows.get(0).get(auditTrailRemarksField));
 
                 if (!auditTrailSummaryField.isEmpty() && !summaryTemplate.isEmpty()) {
                     String processedTemplate = AppUtil.processHashVariable(summaryTemplate, formData.getAssignment(), null, null);
