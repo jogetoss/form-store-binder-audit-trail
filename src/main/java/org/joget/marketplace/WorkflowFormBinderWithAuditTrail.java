@@ -72,6 +72,7 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
             String summaryTemplate = getPropertyString("summaryTemplate");
             boolean tracksEverything = Boolean.parseBoolean(getPropertyString("tracksEverything"));
             Object fieldMappingsProperty = getProperty("fieldMappings");
+            Object fieldValuesProperty = getProperty("fieldValues");
 
             AppDefinition appDef = AppUtil.getCurrentAppDefinition();
             FormDefinitionDao formDefinitionDao = (FormDefinitionDao) FormUtil.getApplicationContext().getBean("formDefinitionDao");
@@ -234,6 +235,27 @@ public class WorkflowFormBinderWithAuditTrail extends WorkflowFormBinder {
                         String mappingTo = toObj != null ? toObj.toString().trim() : "";
                         if (!mappingFrom.isEmpty() && !mappingTo.isEmpty()) {
                             auditRow.put(mappingTo, rows.get(0).get(mappingFrom));
+                        }
+                    }
+                }
+
+                //Optional: insert arbitrary values - not necessarily copied from the current form - into
+                //the audit trail record, as configured in the "Additional Field Values" grid. Each value
+                //is processed as a Joget hash variable (e.g. #currentUser.fullName#) so it isn't limited
+                //to static text. Applied here too, before the plugin's own dedicated columns below, so an
+                //entry can never overwrite them.
+                if (fieldValuesProperty instanceof Object[]) {
+                    for (Object entry : (Object[]) fieldValuesProperty) {
+                        if (!(entry instanceof Map)) {
+                            continue;
+                        }
+                        Map valueRow = (Map) entry;
+                        Object fieldObj = valueRow.get("field");
+                        Object valueObj = valueRow.get("value");
+                        String targetField = fieldObj != null ? fieldObj.toString().trim() : "";
+                        String rawValue = valueObj != null ? valueObj.toString() : "";
+                        if (!targetField.isEmpty()) {
+                            auditRow.put(targetField, AppUtil.processHashVariable(rawValue, formData.getAssignment(), null, null));
                         }
                     }
                 }

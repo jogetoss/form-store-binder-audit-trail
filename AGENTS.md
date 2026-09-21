@@ -77,6 +77,10 @@ layout if adding tests.
     for a copy-everything-that-matches behavior that briefly existed as an accidental side effect of
     `auditRow.putAll(rows.get(0))` during the file-upload bugfix (see git history) — that call is
     intentionally not used; only explicitly configured fields are ever copied.
+  - `fieldValues` — a grid of `field`/`value` pairs; each row inserts an arbitrary value - not
+    necessarily copied from the current form - into the named column on the audit trail row. Each
+    `value` is processed as a Joget hash variable (e.g. `#currentUser.fullName#`), so it isn't
+    limited to static text. Applied alongside `fieldMappings`, before the dedicated columns below.
   - `foreignKey` — the column on the audit trail form that stores the parent record's primary key.
   - `tracksEverything` — if checked, an audit row is written on every save even when nothing
     changed; if unchecked, audit rows are only written when at least one tracked field differs.

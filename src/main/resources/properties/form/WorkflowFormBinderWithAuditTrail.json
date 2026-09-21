@@ -73,6 +73,22 @@
             ]
          },
          {
+            "name": "fieldValues",
+            "label": "@@WorkflowFormBinderWithAuditTrail.fieldValues@@",
+            "description": "@@WorkflowFormBinderWithAuditTrail.fieldValuesDescription@@",
+            "type": "grid",
+            "columns": [
+               {
+                  "key": "field",
+                  "label": "@@WorkflowFormBinderWithAuditTrail.fieldValuesField@@"
+               },
+               {
+                  "key": "value",
+                  "label": "@@WorkflowFormBinderWithAuditTrail.fieldValuesValue@@"
+               }
+            ]
+         },
+         {
             "name": "foreignKey",
             "label": "@@WorkflowFormBinderWithAuditTrail.foreignKey@@",
             "description": "@@WorkflowFormBinderWithAuditTrail.foreignKeyDescription@@",
