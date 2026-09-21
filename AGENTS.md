@@ -22,8 +22,8 @@ Produces `target/form-store-binder-audit-trail-<version>.jar`, an OSGi bundle bu
 [pom.xml](pom.xml)). Deploy by dropping the jar into a running Joget instance's plugin directory
 (e.g. `wflow/app_plugins`).
 
-Compiler target is Java 1.7 (`pom.xml`), so avoid newer language features even though the dev JDK
-may be newer.
+Compiler target is Java 11 (`pom.xml`), so avoid language features newer than that even though the
+dev JDK may be newer.
 
 The `wflow-core` dependency (`provided` scope) must be resolvable — it's expected in the local
 `~/.m2` repository (built/installed from the main `jw-community` Joget repo) since it isn't on
